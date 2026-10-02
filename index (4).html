@@ -1,0 +1,53 @@
+<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Parlimen Malaysia – Media Monitor</title>
+<style>
+:root{--bg:#f4f6fa;--c:#fff;--tx:#14213d;--mu:#64708a;--bd:#e2e7f0;--ac:#0b3d91;--pos:#1f9d55;--neu:#9aa5b8;--neg:#d64545}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1424;--c:#172038;--tx:#e8edf8;--mu:#93a0bd;--bd:#26314f;--ac:#3a66c4}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 system-ui,sans-serif}
+header{background:var(--ac);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+h1{margin:0;font-size:18px}main{max-width:1100px;margin:auto;padding:14px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+button,select{font:inherit;border:1px solid var(--bd);background:var(--c);color:var(--tx);padding:7px 12px;border-radius:8px;cursor:pointer}
+button.on{background:var(--ac);color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
+.card{background:var(--c);border:1px solid var(--bd);border-radius:12px;padding:14px}.k{font-size:24px;font-weight:700}.l,.meta{color:var(--mu);font-size:12px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}.scroll{max-height:560px;overflow-y:auto}
+.item{border-bottom:1px solid var(--bd);padding:9px 0}.tag{font-size:11px;padding:1px 8px;border-radius:99px;color:#fff;margin-right:6px}
+.stack{display:flex;height:16px;border-radius:8px;overflow:hidden;margin:8px 0}.pos{color:var(--pos)}.neg{color:var(--neg)}.neu{color:var(--neu)}
+.warn{background:#fff3cd;color:#664d03;padding:8px 12px;border-radius:8px;margin-bottom:12px}.hide{display:none}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ff5252;margin-right:6px;animation:p 1.4s infinite}@keyframes p{50%{opacity:.2}}
+</style></head><body>
+<header><h1>🏛️ Parlimen Malaysia – Media Monitor</h1><span><span class="dot"></span><span id="upd">loading…</span></span></header>
+<main><div id="demo" class="warn hide">Showing <b>demo data</b>. Add your API secrets in GitHub (see README) to see real posts.</div>
+<div class="bar"><button data-t="live" class="on">Live</button><button data-t="rep">Monthly report</button><span style="flex:1"></span>
+<select id="mon"></select><select id="pf"><option value="all">All platforms</option><option value="ig">Instagram</option><option value="x">X</option><option value="fb">Facebook</option><option value="th">Threads</option></select></div>
+<section id="live"><div class="grid" id="kp"></div><div class="two"><div class="card"><h2>Latest posts</h2><div class="scroll" id="feed"></div></div><div class="card"><h2>Public feedback</h2><div id="sent"></div><div class="scroll" id="cm"></div></div></div></section>
+<section id="rep" class="hide"><div class="card" id="report"></div></section></main>
+<script>
+const PL={ig:['Instagram','#e1306c'],x:['X','#6b7280'],fb:['Facebook','#1877f2'],th:['Threads','#8a63d2']},MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const $=s=>document.querySelector(s),fm=n=>n.toLocaleString('en-MY'),esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+let D=[],seen=new Set();
+const tag=p=>`<span class="tag" style="background:${PL[p][1]}">${PL[p][0]}</span>`,kp=(l,v)=>`<div class="card"><div class="k">${v}</div><div class="l">${l}</div></div>`;
+const tot=a=>{const t={n:a.length,lk:0,sh:0,c:0,pos:0,neu:0,neg:0};a.forEach(p=>{t.lk+=p.likes;t.sh+=p.shares;t.c+=p.comments_count;p.comments.forEach(c=>t[c.s]++)});return t};
+const pc=(a,b)=>b?Math.round(a/b*100):0;
+function sb(t){const s=t.pos+t.neu+t.neg||1;return`<div class="stack"><div style="width:${t.pos/s*100}%;background:var(--pos)"></div><div style="width:${t.neu/s*100}%;background:var(--neu)"></div><div style="width:${t.neg/s*100}%;background:var(--neg)"></div></div><span class="pos">● Positive ${pc(t.pos,s)}%</span> <span class="neu">● Neutral ${pc(t.neu,s)}%</span> <span class="neg">● Negative ${pc(t.neg,s)}%</span>`}
+const sel=()=>D.filter(p=>$('#pf').value=='all'||p.platform==$('#pf').value);
+function render(){const a=sel(),m=+$('#mon').value,am=a.filter(p=>new Date(p.time).getMonth()==m),t=tot(am);
+ $('#kp').innerHTML=kp('Posts this month',t.n)+kp('Likes / reactions',fm(t.lk))+kp('Comments',fm(t.c))+kp('Negative feedback',pc(t.neg,t.pos+t.neu+t.neg)+'%');
+ $('#feed').innerHTML=a.slice(0,20).map(p=>`<div class="item">${tag(p.platform)}<b>${esc(p.topic)}</b>${seen.size&&!seen.has(p.key)?' 🆕':''}<div>${esc(p.text.slice(0,200))}</div><div class="meta">${new Date(p.time).toLocaleString('en-MY')} · ❤ ${fm(p.likes)} · 💬 ${p.comments_count} · ↗ ${p.shares} · <a href="${esc(p.url)}" target="_blank" rel="noopener">open</a></div></div>`).join('')||'<div class="meta">No posts yet. Check that your secrets are set and that the Actions run succeeded.</div>';
+ $('#sent').innerHTML=sb(t);const cs=[];a.slice(0,15).forEach(p=>p.comments.forEach(c=>cs.push({...c,p:p.platform})));cs.sort((x,y)=>new Date(y.time)-new Date(x.time));
+ $('#cm').innerHTML=cs.slice(0,25).map(c=>`<div class="item">${tag(c.p)}<span class="${c.s}">●</span> ${esc(c.text)}<div class="meta">${new Date(c.time).toLocaleString('en-MY')}</div></div>`).join('');
+ const pm=a.filter(p=>new Date(p.time).getMonth()==m-1),pt=tot(pm);let by={},tc={},tn={};am.forEach(p=>{by[p.platform]=(by[p.platform]||0)+p.likes+p.shares+p.comments_count;tc[p.topic]=(tc[p.topic]||0)+1;tn[p.topic]=(tn[p.topic]||0)+p.comments.filter(c=>c.s=='neg').length});
+ const mx=o=>Object.entries(o).sort((x,y)=>y[1]-x[1])[0]||['-',0];
+ if(!am.length){$('#report').innerHTML='No data for this month.';return}
+ const bp=mx(by),bt=mx(tc),wt=mx(tn),top=[...am].sort((x,y)=>y.likes-x.likes)[0],S=t.pos+t.neu+t.neg,dl=pt.n?Math.round((t.n-pt.n)/pt.n*100):null;
+ $('#report').innerHTML=`<h2>📄 Monthly Report – ${MN[m]} 2026</h2><div class="grid">${kp('Posts',t.n)+kp('Engagement',fm(t.lk+t.sh+t.c))+kp('Positive',pc(t.pos,S)+'%')+kp('Negative',pc(t.neg,S)+'%')}</div>${sb(t)}
+ <ul><li>Most active topic: <b>${esc(bt[0])}</b> (${bt[1]} posts)</li><li>Best platform: <b>${PL[bp[0]]?PL[bp[0]][0]:'-'}</b> (${fm(bp[1])} interactions)</li><li>Top post: ${esc(top.text.slice(0,120))} (${fm(top.likes)} likes)</li><li>Most criticised topic: <b>${esc(wt[0])}</b></li></ul>
+ <p><b>Conclusion:</b> In ${MN[m]} 2026 Parlimen Malaysia published ${t.n} posts${dl===null?'':`, ${dl>=0?'up':'down'} ${Math.abs(dl)}% vs last month`}. Public feedback was ${pc(t.pos,S)>=50?'mostly positive':'mixed'} (${pc(t.pos,S)}% positive, ${pc(t.neg,S)}% negative). "${esc(wt[0])}" drew the most criticism and may need clearer communication.</p><button onclick="print()">🖨 Print / PDF</button>`}
+async function load(){try{const r=await fetch('data/posts.json?'+Date.now()),j=await r.json();const old=new Set(D.map(p=>p.key));D=j.posts;
+ seen=D.length&&old.size?old:new Set();$('#demo').classList.toggle('hide',!j.demo);$('#upd').textContent='Updated '+new Date(j.generated_at).toLocaleTimeString('en-MY');render()}catch(e){$('#upd').textContent='failed to load data'}}
+for(let m=9;m>=0;m--)$('#mon').innerHTML+=`<option value="${m}">${MN[m]} 2026</option>`;$('#mon').value=new Date().getMonth();
+$('#mon').onchange=$('#pf').onchange=render;
+document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-t]').forEach(x=>x.classList.toggle('on',x==b));$('#live').classList.toggle('hide',b.dataset.t!='live');$('#rep').classList.toggle('hide',b.dataset.t!='rep')});
+load();setInterval(load,60000);
+</script></body></html>
